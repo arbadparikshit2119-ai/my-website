@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Campus Lost &amp; Found</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Fraunces:wght@600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    body {
+      box-sizing: border-box;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .font-display {
+      font-family: 'Fraunces', serif;
+    }
+    .tab-active {
+      border-bottom: 3px solid currentColor;
+    }
+    .card-hover:hover {
+      transform: translateY(-2px);
+    }
+    .badge-lost {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    }
+    .badge-found {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+    .toast {
+      animation: slideIn 0.3s ease-out, fadeOut 0.3s ease-in 2.7s forwards;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      to { opacity: 0; }
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="h-full">
+  <div id="app" class="h-full overflow-auto" style="background-color: #faf7f2;"><!-- Header -->
+   <header class="sticky top-0 z-40" style="background-color: #1e3a5f;">
+    <div class="max-w-6xl mx-auto px-4 py-4">
+     <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+       <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background-color: #f4a261;">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+       </div>
+       <div>
+        <h1 id="site-title" class="font-display text-xl font-bold text-white">Campus Lost &amp; Found</h1>
+        <p id="tagline" class="text-xs" style="color: #94a3b8;">Help reunite items with their owners</p>
+       </div>
+      </div>
+      <div class="flex gap-2"><button onclick="openModal('lost')" id="lost-btn" class="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90" style="background-color: #dc2626;"> 📢 Report Lost </button> <button onclick="openModal('found')" id="found-btn" class="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90" style="background-color: #059669;"> 🎉 Report Found </button>
+      </div>
+     </div>
+    </div>
+   </header><!-- Main Content -->
+   <main class="max-w-6xl mx-auto px-4 py-6"><!-- Stats Bar -->
+    <div class="grid grid-cols-3 gap-4 mb-6">
+     <div class="rounded-xl p-4 text-center" style="background-color: #ffffff; border: 1px solid #e5e0d8;">
+      <p class="text-3xl font-bold" style="color: #1e3a5f;" id="total-count">0</p>
+      <p class="text-sm" style="color: #64748b;">Total Posts</p>
+     </div>
+     <div class="rounded-xl p-4 text-center" style="background-color: #ffffff; border: 1px solid #e5e0d8;">
+      <p class="text-3xl font-bold" style="color: #dc2626;" id="lost-count">0</p>
+      <p class="text-sm" style="color: #64748b;">Items Lost</p>
+     </div>
+     <div class="rounded-xl p-4 text-center" style="background-color: #ffffff; border: 1px solid #e5e0d8;">
+      <p class="text-3xl font-bold" style="color: #059669;" id="found-count">0</p>
+      <p class="text-sm" style="color: #64748b;">Items Found</p>
+     </div>
+    </div><!-- Filters -->
+    <div class="rounded-xl p-4 mb-6" style="background-color: #ffffff; border: 1px solid #e5e0d8;">
+     <div class="flex flex-wrap gap-4 items-center"><!-- Search -->
+      <div class="flex-1 min-w-[200px]">
+       <div class="relative">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style="color: #94a3b8;" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg><input type="text" id="search-input" placeholder="Search items..." class="w-full pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2" style="border-color: #e5e0d8; background-color: #faf7f2;" oninput="filterItems()">
+       </div>
+      </div><!-- Type Filter -->
+      <div class="flex rounded-lg overflow-hidden" style="border: 1px solid #e5e0d8;"><button onclick="setTypeFilter('all')" id="filter-all" class="px-4 py-2 text-sm font-medium transition-colors" style="background-color: #1e3a5f; color: white;">All</button> <button onclick="setTypeFilter('lost')" id="filter-lost" class="px-4 py-2 text-sm font-medium transition-colors" style="background-color: #ffffff; color: #64748b;">Lost</button> <button onclick="setTypeFilter('found')" id="filter-found" class="px-4 py-2 text-sm font-medium transition-colors" style="background-color: #ffffff; color: #64748b;">Found</button>
+      </div><!-- Category Filter --> <select id="category-filter" onchange="filterItems()" class="px-4 py-2 rounded-lg border focus:outline-none focus:ring-2" style="border-color: #e5e0d8; background-color: #ffffff; color: #1e3a5f;"> <option value="">All Categories</option> <option value="electronics">📱 Electronics</option> <option value="clothing">👕 Clothing</option> <option value="accessories">👜 Accessories</option> <option value="books">📚 Books &amp; Notes</option> <option value="keys">🔑 Keys</option> <option value="cards">💳 Cards &amp; IDs</option> <option value="other">📦 Other</option> </select>
+     </div>
+    </div><!-- Items Grid -->
+    <div id="items-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"><!-- Items will be rendered here -->
+    </div><!-- Empty State -->
+    <div id="empty-state" class="hidden text-center py-16">
+     <div class="w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: #e5e0d8;">
+      <svg class="w-12 h-12" style="color: #94a3b8;" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+      </svg>
+     </div>
+     <h3 class="font-display text-xl font-bold mb-2" style="color: #1e3a5f;">No items yet</h3>
+     <p style="color: #64748b;">Be the first to report a lost or found item!</p>
+    </div>
+   </main><!-- Modal -->
+   <div id="modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" onclick="closeModal()"></div>
+    <div class="absolute inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg max-h-[90%] overflow-auto rounded-2xl shadow-2xl animate-in" style="background-color: #ffffff;">
+     <div class="sticky top-0 p-4 border-b flex items-center justify-between" style="background-color: #ffffff; border-color: #e5e0d8;">
+      <h2 id="modal-title" class="font-display text-xl font-bold" style="color: #1e3a5f;">Report Item</h2><button onclick="closeModal()" class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100">
+       <svg class="w-5 h-5" style="color: #64748b;" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+       </svg></button>
+     </div>
+     <form id="item-form" class="p-4 space-y-4" onsubmit="submitItem(event)"><input type="hidden" id="form-type" value="lost">
+      <div><label class="block text-sm font-medium mb-1" style="color: #1e3a5f;">Item Title *</label> <input type="text" id="form-title" required placeholder="e.g., Blue Water Bottle" class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2" style="border-color: #e5e0d8; background-color: #faf7f2;">
+      </div>
+      <div><label class="block text-sm font-medium mb-1" style="color: #1e3a5f;">Category *</label> <select id="form-category" required class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2" style="border-color: #e5e0d8; background-color: #faf7f2;"> <option value="">Select category</option> <option value="electronics">📱 Electronics</option> <option value="clothing">👕 Clothing</option> <option value="accessories">👜 Accessories</option> <option value="books">📚 Books &amp; Notes</option> <option value="keys">🔑 Keys</option> <option value="cards">💳 Cards &amp; IDs</option> <option value="other">📦 Other</option> </select>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+       <div><label class="block text-sm font-medium mb-1" style="color: #1e3a5f;">Location *</label> <input type="text" id="form-location" required placeholder="e.g., Library 2nd Floor" class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2" style="border-color: #e5e0d8; background-color: #faf7f2;">
+       </div>
+       <div><label class="block text-sm font-medium mb-1" style="color: #1e3a5f;">Date *</label> <input type="date" id="form-date" required class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2" style="border-color: #e5e0d8; background-color: #faf7f2;">
+       </div>
+      </div>
+      <div><label class="block text-sm font-medium mb-1" style="color: #1e3a5f;">Description</label> <textarea id="form-description" rows="3" placeholder="Provide any details that might help identify the item..." class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 resize-none" style="border-color: #e5e0d8; background-color: #faf7f2;"></textarea>
+      </div>
+      <div class="pt-2 border-t" style="border-color: #e5e0d8;">
+       <p class="text-sm font-medium mb-3" style="color: #1e3a5f;">Contact Information</p>
+       <div class="space-y-3">
+        <div><label class="block text-sm mb-1" style="color: #64748b;">Your Name *</label> <input type="text" id="form-name" required placeholder="John Doe" class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2" style="border-color: #e5e0d8; background-color: #faf7f2;">
+        </div>
+        <div><label class="block text-sm mb-1" style="color: #64748b;">Email *</label> <input type="email" id="form-email" required placeholder="john@university.edu" class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2" style="border-color: #e5e0d8; background-color: #faf7f2;">
+        </div>
+        <div><label class="block text-sm mb-1" style="color: #64748b;">Phone (Optional)</label> <input type="tel" id="form-phone" placeholder="(555) 123-4567" class="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2" style="border-color: #e5e0d8; background-color: #faf7f2;">
+        </div>
+       </div>
+      </div><button type="submit" id="submit-btn" class="w-full py-3 rounded-lg text-white font-semibold transition-all hover:opacity-90 disabled:opacity-50" style="background-color: #1e3a5f;"> Submit Report </button>
+     </form>
+    </div>
+   </div><!-- Detail Modal -->
+   <div id="detail-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/50" onclick="closeDetailModal()"></div>
+    <div class="absolute inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg rounded-2xl shadow-2xl animate-in overflow-hidden" style="background-color: #ffffff;">
+     <div id="detail-content"></div>
+    </div>
+   </div><!-- Toast Container -->
+   <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+  </div>
+  <script>
+    // State
+    let allItems = [];
+    let currentTypeFilter = 'all';
+    let currentRecordCount = 0;
+
+    const defaultConfig = {
+      site_title: 'Campus Lost & Found',
+      tagline: 'Help reunite items with their owners',
+      lost_button_text: 'Report Lost',
+      found_button_text: 'Report Found',
+      primary_color: '#1e3a5f',
+      accent_color: '#f4a261',
+      background_color: '#faf7f2',
+      surface_color: '#ffffff',
+      text_color: '#64748b'
+    };
+
+    const categoryEmojis = {
+      electronics: '📱',
+      clothing: '👕',
+      accessories: '👜',
+      books: '📚',
+      keys: '🔑',
+      cards: '💳',
+      other: '📦'
+    };
+
+    // Data Handler
+    const dataHandler = {
+      onDataChanged(data) {
+        allItems = data;
+        currentRecordCount = data.length;
+        updateStats();
+        renderItems();
+      }
+    };
+
+    // Initialize
+    async function init() {
+      // Set today's date as default
+      document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
+      
+      // Initialize Data SDK
+      const result = await window.dataSdk.init(dataHandler);
+      if (!result.isOk) {
+        showToast('Failed to load data', 'error');
+      }
+
+      // Initialize Element SDK
+      if (window.elementSdk) {
+        window.elementSdk.init({
+          defaultConfig,
+          onConfigChange,
+          mapToCapabilities,
+          mapToEditPanelValues
+        });
+      }
+    }
+
+    async function onConfigChange(config) {
+      const c = { ...defaultConfig, ...config };
+      
+      document.getElementById('site-title').textContent = c.site_title;
+      document.getElementById('tagline').textContent = c.tagline;
+      document.getElementById('lost-btn').innerHTML = `📢 ${c.lost_button_text}`;
+      document.getElementById('found-btn').innerHTML = `🎉 ${c.found_button_text}`;
+      
+      // Apply colors
+      document.getElementById('app').style.backgroundColor = c.background_color;
+      document.querySelector('header').style.backgroundColor = c.primary_color;
+      
+      // Update all surface elements
+      document.querySelectorAll('[data-surface]').forEach(el => {
+        el.style.backgroundColor = c.surface_color;
+      });
+    }
+
+    function mapToCapabilities(config) {
+      const c = { ...defaultConfig, ...config };
+      return {
+        recolorables: [
+          {
+            get: () => c.background_color,
+            set: (v) => window.elementSdk.setConfig({ background_color: v })
+          },
+          {
+            get: () => c.surface_color,
+            set: (v) => window.elementSdk.setConfig({ surface_color: v })
+          },
+          {
+            get: () => c.text_color,
+            set: (v) => window.elementSdk.setConfig({ text_color: v })
+          },
+          {
+            get: () => c.primary_color,
+            set: (v) => window.elementSdk.setConfig({ primary_color: v })
+          },
+          {
+            get: () => c.accent_color,
+            set: (v) => window.elementSdk.setConfig({ accent_color: v })
+          }
+        ],
+        borderables: [],
+        fontEditable: undefined,
+        fontSizeable: undefined
+      };
+    }
+
+    function mapToEditPanelValues(config) {
+      const c = { ...defaultConfig, ...config };
+      return new Map([
+        ['site_title', c.site_title],
+        ['tagline', c.tagline],
+        ['lost_button_text', c.lost_button_text],
+        ['found_button_text', c.found_button_text]
+      ]);
+    }
+
+    function updateStats() {
+      const lostItems = allItems.filter(i => i.type === 'lost');
+      const foundItems = allItems.filter(i => i.type === 'found');
+      
+      document.getElementById('total-count').textContent = allItems.length;
+      document.getElementById('lost-count').textContent = lostItems.length;
+      document.getElementById('found-count').textContent = foundItems.length;
+    }
+
+    function renderItems() {
+      const grid = document.getElementById('items-grid');
+      const emptyState = document.getElementById('empty-state');
+      const filtered = getFilteredItems();
+      
+      if (filtered.length === 0) {
+        grid.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      
+      emptyState.classList.add('hidden');
+      
+      // Build items map for efficient updates
+      const existingCards = new Map(
+        [...grid.children].map(el => [el.dataset.itemId, el])
+      );
+      
+      const fragment = document.createDocumentFragment();
+      
+      filtered.forEach((item, index) => {
+        if (existingCards.has(item.__backendId)) {
+          updateCard(existingCards.get(item.__backendId), item);
+          existingCards.delete(item.__backendId);
+        } else {
+          fragment.appendChild(createCard(item, index));
+        }
+      });
+      
+      // Remove deleted items
+      existingCards.forEach(el => el.remove());
+      
+      // Add new items
+      grid.appendChild(fragment);
+      
+      // Reorder if needed
+      filtered.forEach((item, index) => {
+        const card = grid.querySelector(`[data-item-id="${item.__backendId}"]`);
+        if (card && card !== grid.children[index]) {
+          grid.insertBefore(card, grid.children[index]);
+        }
+      });
+    }
+
+    function createCard(item, index) {
+      const card = document.createElement('div');
+      card.dataset.itemId = item.__backendId;
+      card.className = 'rounded-xl overflow-hidden card-hover transition-all cursor-pointer animate-in';
+      card.style.cssText = 'background-color: #ffffff; border: 1px solid #e5e0d8; animation-delay: ' + (index * 0.05) + 's;';
+      card.onclick = () => showDetail(item);
+      
+      updateCardContent(card, item);
+      return card;
+    }
+
+    function updateCard(card, item) {
+      updateCardContent(card, item);
+    }
+
+    function updateCardContent(card, item) {
+      const emoji = categoryEmojis[item.category] || '📦';
+      const badgeClass = item.type === 'lost' ? 'badge-lost' : 'badge-found';
+      const typeLabel = item.type === 'lost' ? 'LOST' : 'FOUND';
+      
+      card.innerHTML = `
+        <div class="p-4">
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style="background-color: #faf7f2;">
+              ${emoji}
+            </div>
+            <span class="px-2 py-1 rounded-full text-xs font-bold text-white ${badgeClass}">
+              ${typeLabel}
+            </span>
+          </div>
+          <h3 class="font-semibold text-lg mb-1 line-clamp-1" style="color: #1e3a5f;">${escapeHtml(item.title)}</h3>
+          <p class="text-sm mb-3 line-clamp-2" style="color: #64748b;">${escapeHtml(item.description || 'No description provided')}</p>
+          <div class="flex items-center gap-4 text-xs" style="color: #94a3b8;">
+            <span class="flex items-center gap-1">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              ${escapeHtml(item.location)}
+            </span>
+            <span class="flex items-center gap-1">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              ${formatDate(item.date)}
+            </span>
+          </div>
+        </div>
+      `;
+    }
+
+    function getFilteredItems() {
+      const searchTerm = document.getElementById('search-input').value.toLowerCase();
+      const categoryFilter = document.getElementById('category-filter').value;
+      
+      return allItems
+        .filter(item => {
+          if (currentTypeFilter !== 'all' && item.type !== currentTypeFilter) return false;
+          if (categoryFilter && item.category !== categoryFilter) return false;
+          if (searchTerm) {
+            const searchable = `${item.title} ${item.description} ${item.location}`.toLowerCase();
+            if (!searchable.includes(searchTerm)) return false;
+          }
+          return true;
+        })
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }
+
+    function filterItems() {
+      renderItems();
+    }
+
+    function setTypeFilter(type) {
+      currentTypeFilter = type;
+      
+      // Update button styles
+      ['all', 'lost', 'found'].forEach(t => {
+        const btn = document.getElementById(`filter-${t}`);
+        if (t === type) {
+          btn.style.backgroundColor = '#1e3a5f';
+          btn.style.color = 'white';
+        } else {
+          btn.style.backgroundColor = '#ffffff';
+          btn.style.color = '#64748b';
+        }
+      });
+      
+      filterItems();
+    }
+
+    function openModal(type) {
+      if (currentRecordCount >= 999) {
+        showToast('Maximum limit reached. Please contact admin.', 'error');
+        return;
+      }
+      
+      document.getElementById('form-type').value = type;
+      document.getElementById('modal-title').textContent = type === 'lost' ? '📢 Report Lost Item' : '🎉 Report Found Item';
+      document.getElementById('submit-btn').style.backgroundColor = type === 'lost' ? '#dc2626' : '#059669';
+      document.getElementById('modal').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden');
+      document.body.style.overflow = '';
+      document.getElementById('item-form').reset();
+      document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
+    }
+
+    async function submitItem(e) {
+      e.preventDefault();
+      
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+      
+      const item = {
+        id: Date.now().toString(),
+        type: document.getElementById('form-type').value,
+        title: document.getElementById('form-title').value,
+        category: document.getElementById('form-category').value,
+        location: document.getElementById('form-location').value,
+        date: document.getElementById('form-date').value,
+        description: document.getElementById('form-description').value,
+        contact_name: document.getElementById('form-name').value,
+        contact_email: document.getElementById('form-email').value,
+        contact_phone: document.getElementById('form-phone').value,
+        created_at: new Date().toISOString(),
+        status: 'active'
+      };
+      
+      const result = await window.dataSdk.create(item);
+      
+      btn.disabled = false;
+      btn.textContent = 'Submit Report';
+      
+      if (result.isOk) {
+        showToast('Item reported successfully!', 'success');
+        closeModal();
+      } else {
+        showToast('Failed to submit. Please try again.', 'error');
+      }
+    }
+
+    function showDetail(item) {
+      const emoji = categoryEmojis[item.category] || '📦';
+      const badgeClass = item.type === 'lost' ? 'badge-lost' : 'badge-found';
+      const typeLabel = item.type === 'lost' ? 'LOST' : 'FOUND';
+      
+      document.getElementById('detail-content').innerHTML = `
+        <div class="p-6">
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-14 h-14 rounded-xl flex items-center justify-center text-3xl" style="background-color: #faf7f2;">
+                ${emoji}
+              </div>
+              <div>
+                <span class="px-2 py-1 rounded-full text-xs font-bold text-white ${badgeClass}">
+                  ${typeLabel}
+                </span>
+                <h2 class="font-display text-xl font-bold mt-1" style="color: #1e3a5f;">${escapeHtml(item.title)}</h2>
+              </div>
+            </div>
+            <button onclick="closeDetailModal()" class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100">
+              <svg class="w-5 h-5" style="color: #64748b;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div class="p-3 rounded-lg" style="background-color: #faf7f2;">
+                <p class="text-xs mb-1" style="color: #94a3b8;">Location</p>
+                <p class="font-medium" style="color: #1e3a5f;">📍 ${escapeHtml(item.location)}</p>
+              </div>
+              <div class="p-3 rounded-lg" style="background-color: #faf7f2;">
+                <p class="text-xs mb-1" style="color: #94a3b8;">Date</p>
+                <p class="font-medium" style="color: #1e3a5f;">📅 ${formatDate(item.date)}</p>
+              </div>
+            </div>
+            
+            ${item.description ? `
+              <div>
+                <p class="text-xs mb-1" style="color: #94a3b8;">Description</p>
+                <p style="color: #64748b;">${escapeHtml(item.description)}</p>
+              </div>
+            ` : ''}
+            
+            <div class="pt-4 border-t" style="border-color: #e5e0d8;">
+              <p class="text-xs mb-3" style="color: #94a3b8;">Contact Information</p>
+              <div class="space-y-2">
+                <p class="font-medium" style="color: #1e3a5f;">👤 ${escapeHtml(item.contact_name)}</p>
+                <a href="mailto:${escapeHtml(item.contact_email)}" class="flex items-center gap-2 text-sm hover:underline" style="color: #1e3a5f;">
+                  ✉️ ${escapeHtml(item.contact_email)}
+                </a>
+                ${item.contact_phone ? `
+                  <a href="tel:${escapeHtml(item.contact_phone)}" class="flex items-center gap-2 text-sm hover:underline" style="color: #1e3a5f;">
+                    📞 ${escapeHtml(item.contact_phone)}
+                  </a>
+                ` : ''}
+              </div>
+            </div>
+            
+            <div class="flex gap-2 pt-4">
+              <a href="mailto:${escapeHtml(item.contact_email)}?subject=Re: ${encodeURIComponent(item.type === 'lost' ? 'Lost' : 'Found')}: ${encodeURIComponent(item.title)}" 
+                class="flex-1 py-3 rounded-lg text-white font-semibold text-center transition-all hover:opacity-90"
+                style="background-color: #1e3a5f;">
+                ✉️ Send Email
+              </a>
+              ${item.contact_phone ? `
+                <a href="tel:${escapeHtml(item.contact_phone)}" 
+                  class="px-6 py-3 rounded-lg font-semibold text-center transition-all hover:opacity-90"
+                  style="background-color: #faf7f2; color: #1e3a5f;">
+                  📞 Call
+                </a>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('detail-modal').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeDetailModal() {
+      document.getElementById('detail-modal').classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast px-4 py-3 rounded-lg shadow-lg flex items-center gap-2';
+      toast.style.backgroundColor = type === 'success' ? '#059669' : '#dc2626';
+      toast.style.color = 'white';
+      toast.innerHTML = `
+        <span>${type === 'success' ? '✓' : '✕'}</span>
+        <span>${escapeHtml(message)}</span>
+      `;
+      container.appendChild(toast);
+      
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    function formatDate(dateStr) {
+      return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // Start
+    init();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9c1d3821d22fb85f',t:'MTc2OTA2NTY5Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
